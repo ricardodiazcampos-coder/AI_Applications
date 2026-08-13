@@ -1,6 +1,8 @@
 # Despliegue en Netlify
 
-Guía para publicar la aplicación de gestión financiera en [Netlify](https://docs.netlify.com/deploy/deploy-overview/).
+> **Importante:** Netlify **no soporta funciones Python**. Esta app Flask **no funcionará** en Netlify Functions (ver [Functions overview](https://docs.netlify.com/build/functions/overview/)). Usa **[DEPLOY_RENDER.md](DEPLOY_RENDER.md)** para publicar la aplicación.
+
+Guía histórica / referencia para archivos estáticos en Netlify:
 
 ## Requisitos previos
 
