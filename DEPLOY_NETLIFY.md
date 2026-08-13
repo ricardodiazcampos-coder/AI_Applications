@@ -9,7 +9,8 @@ Guía para publicar la aplicación de gestión financiera en [Netlify](https://d
 3. Archivos de configuración incluidos en este repositorio:
    - `netlify.toml`
    - `netlify/functions/api.py`
-   - `runtime.txt`
+   - `netlify/functions/requirements.txt`
+   - `netlify/functions/.python-version`
 
 ## Cómo funciona
 
@@ -47,7 +48,8 @@ En **Site configuration → Environment variables**, agregar:
 | Variable | Valor | Alcance |
 |----------|-------|---------|
 | `FLASK_SECRET_KEY` | Una cadena larga y aleatoria (ej. salida de `python -c "import secrets; print(secrets.token_hex(32))"`) | Functions |
-| `NETLIFY` | `true` | All (opcional; ya está en `netlify.toml`) |
+| `PYTHON_VERSION` | `3.11` | Functions |
+| `NETLIFY` | `true` | Functions (opcional; la app también lo detecta sola) |
 
 Sin `FLASK_SECRET_KEY` estable, las sesiones se invalidan en cada despliegue o reinicio de función.
 
@@ -83,9 +85,9 @@ proyecto/
 ├── netlify/functions/
 │   ├── api.py             # Handler serverless
 │   └── requirements.txt   # Dependencias de la función
-├── static/                # Publicado en CDN
+├── static/                # Publicado en CDN (+ _redirects)
 ├── templates/             # Incluido en la función
-└── runtime.txt            # Python 3.11
+└── netlify/functions/.python-version
 ```
 
 ## Solución de problemas
