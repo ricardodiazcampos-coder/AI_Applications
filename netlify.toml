@@ -1,0 +1,30 @@
+# Configuración de despliegue atómico en Netlify
+# https://docs.netlify.com/deploy/deploy-overview/
+
+[build]
+  publish = "static"
+  functions = "netlify/functions"
+
+[build.environment]
+  NETLIFY = "true"
+  PYTHON_VERSION = "3.11"
+
+[functions]
+  included_files = [
+    "templates/**",
+    "app.py",
+    "auth_service.py",
+    "auth_validators.py",
+    "models.py",
+    "persistence.py",
+    "serialization.py",
+    "utils.py",
+    "validators.py",
+    "web_logic.py"
+  ]
+
+# Archivos estáticos desde la carpeta publish; el resto va a la función Flask.
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200

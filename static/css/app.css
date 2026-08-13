@@ -1,0 +1,25 @@
+body {
+  background: #f4f7fb;
+}
+
+.preview-box {
+  background: #eef4ff;
+  border: 1px solid #d7e3f4;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  height: 100%;
+}
+
+.summary-card {
+  background: #fff;
+}
+
+.nav-tabs .nav-link {
+  white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+  .tab-content {
+    padding: 1rem !important;
+  }
+}

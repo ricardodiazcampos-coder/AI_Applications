@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block content %}
+<p class="text-muted mb-3">Control de ingresos, gastos y metas de ahorro</p>
+
+<ul class="nav nav-tabs flex-nowrap overflow-auto" id="financeTabs" role="tablist">
+  {% for tab_id, label in [
+    ('income', 'Ingresos'),
+    ('expenses', 'Gastos fijos'),
+    ('unexpected', 'Gastos imprevistos'),
+    ('goals', 'Metas de ahorro'),
+    ('summary', 'Resumen'),
+    ('charts', 'Gráficos')
+  ] %}
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {% if active_tab == tab_id %}active{% endif %}"
+            data-bs-toggle="tab" data-bs-target="#tab-{{ tab_id }}" type="button">
+      {{ label }}
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+
+<div class="tab-content card border-top-0 rounded-bottom shadow-sm p-3 p-md-4">
+  <!-- Ingresos -->
+  <div class="tab-pane fade {% if active_tab == 'income' %}show active{% endif %}" id="tab-income">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <h5 class="mb-3">Datos de ingresos mensuales</h5>
+        <form method="post" action="{{ url_for('save_income') }}" class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Salario mensual</label>
+            <input type="text" name="salary" class="form-control" required
+                   value="{{ profile.monthly_salary or '' }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Ingresos adicionales (opcional)</label>
+            <input type="text" name="extra" class="form-control"
+                   value="{{ profile.additional_income or '' }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Ahorro mensual planificado (opcional)</label>
+            <input type="text" name="planned_savings" class="form-control"
+                   value="{{ profile.planned_monthly_savings or '' }}">
+            <div class="form-text">Si lo deja vacío, se usa la suma de aportes a metas o el balance disponible.</div>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Guardar ingresos</button>
+          </div>
+        </form>
+      </div>
+      <div class="col-lg-6">
+        <div class="preview-box">
+          <h6>Vista previa</h6>
+          <ul class="list-unstyled mb-0 small">
+            <li>Total ingresos: <strong>{{ preview.income }}</strong></li>
+            <li>Gastos fijos: <strong>{{ preview.fixed }}</strong></li>
+            <li>Imprevistos: <strong>{{ preview.unexpected }}</strong></li>
+            <li>Balance: <strong>{{ preview.balance }}</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gastos fijos -->
+  <div class="tab-pane fade {% if active_tab == 'expenses' %}show active{% endif %}" id="tab-expenses">
+    <form method="post" action="{{ url_for('add_expense') }}" class="row g-3 align-items-end mb-4">
+      <div class="col-md-5">
+        <label class="form-label">Concepto</label>
+        <input type="text" name="name" class="form-control" list="fixed-expense-options" required>
+        <datalist id="fixed-expense-options">
+          <option value="Alquiler o hipoteca">
+          <option value="Agua">
+          <option value="Electricidad">
+          <option value="Internet">
+          <option value="Préstamo o crédito">
+          <option value="Transporte">
+          <option value="Otros gastos fijos">
+        </datalist>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Monto mensual</label>
+        <input type="text" name="amount" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary">Agregar</button>
+      </div>
+    </form>
+
+    {% if profile.fixed_expenses %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Gasto</th><th class="text-end">Monto mensual</th><th></th></tr></thead>
+        <tbody>
+          {% for exp in profile.fixed_expenses %}
+          <tr>
+            <td>{{ exp.name }}</td>
+            <td class="text-end">{{ format_money(exp.amount) }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('delete_expense') }}" class="d-inline">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No hay gastos fijos registrados.</p>
+    {% endif %}
+    <p class="fw-semibold mb-0">Total gastos fijos: {{ format_money(profile.total_fixed_expenses) }}</p>
+  </div>
+
+  <!-- Gastos imprevistos -->
+  <div class="tab-pane fade {% if active_tab == 'unexpected' %}show active{% endif %}" id="tab-unexpected">
+    <p class="text-muted small">Registre imprevistos del mes: médicos, mantenimiento, emergencias, etc.</p>
+    <form method="post" action="{{ url_for('add_unexpected') }}" class="row g-3 align-items-end mb-4">
+      <div class="col-md-4">
+        <label class="form-label">Concepto</label>
+        <select name="category" id="unexpected-category" class="form-select" required>
+          <option value="">Seleccione...</option>
+          <option value="Gastos médicos">Gastos médicos</option>
+          <option value="Mantenimiento casa">Mantenimiento casa</option>
+          <option value="Mantenimiento vehículo">Mantenimiento vehículo</option>
+          <option value="Emergencias">Emergencias</option>
+          <option value="{{ other_unexpected }}">{{ other_unexpected }}</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-none" id="custom-name-group">
+        <label class="form-label">Nombre del gasto</label>
+        <input type="text" name="custom_name" id="custom-name" class="form-control">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Monto</label>
+        <input type="text" name="amount" class="form-control" required>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Agregar</button>
+      </div>
+    </form>
+
+    {% if profile.unexpected_expenses %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Gasto imprevisto</th><th class="text-end">Monto</th><th></th></tr></thead>
+        <tbody>
+          {% for exp in profile.unexpected_expenses %}
+          <tr>
+            <td>{{ exp.name }}</td>
+            <td class="text-end">{{ format_money(exp.amount) }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('delete_unexpected') }}" class="d-inline">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No hay gastos imprevistos registrados.</p>
+    {% endif %}
+    <p class="mb-1 fw-semibold">Total imprevistos: {{ format_money(profile.total_unexpected_expenses) }}</p>
+    <p class="text-muted small mb-0">Gastos totales (fijos + imprevistos): {{ format_money(profile.total_expenses) }}</p>
+  </div>
+
+  <!-- Metas -->
+  <div class="tab-pane fade {% if active_tab == 'goals' %}show active{% endif %}" id="tab-goals">
+    <form method="post" action="{{ url_for('add_goal') }}" class="row g-3 align-items-end mb-4">
+      <div class="col-md-3">
+        <label class="form-label">Meta</label>
+        <input type="text" name="name" class="form-control" list="goal-options" required>
+        <datalist id="goal-options">
+          <option value="Viaje">
+          <option value="Compra de artículo">
+          <option value="Vehículo">
+          <option value="Fondo de emergencia">
+          <option value="Meta personalizada">
+        </datalist>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Objetivo</label>
+        <input type="text" name="target" class="form-control" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Ya ahorrado</label>
+        <input type="text" name="saved" class="form-control" value="0">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Aporte/mes</label>
+        <input type="text" name="monthly" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">Agregar meta</button>
+      </div>
+    </form>
+
+    {% if profile.savings_goals %}
+    <div class="table-responsive mb-4">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr><th>Meta</th><th class="text-end">Objetivo</th><th class="text-end">Ahorrado</th><th class="text-end">Aporte/mes</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for g in profile.savings_goals %}
+          <tr>
+            <td>{{ g.name }}</td>
+            <td class="text-end">{{ format_money(g.target) }}</td>
+            <td class="text-end">{{ format_money(g.saved) }}</td>
+            <td class="text-end">{{ format_money(g.monthly_contribution) }}</td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('delete_goal') }}" class="d-inline">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h6>Progreso visual</h6>
+    {% for g in goals_progress %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between small">
+        <span>{{ g.name }} ({{ g.saved }} / {{ g.target }})</span>
+        <span>{{ "%.1f"|format(g.percent) }}%</span>
+      </div>
+      <div class="progress" role="progressbar">
+        <div class="progress-bar" style="width: {{ g.percent }}%"></div>
+      </div>
+      <div class="small text-muted">Falta {{ g.remaining }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="text-muted">Agregue metas para ver su progreso.</p>
+    {% endif %}
+  </div>
+
+  <!-- Resumen -->
+  <div class="tab-pane fade {% if active_tab == 'summary' %}show active{% endif %}" id="tab-summary">
+    <div class="row g-3 mb-4">
+      {% for card in summary_cards %}
+      <div class="col-md-6 col-lg-4">
+        <div class="summary-card border rounded p-3 h-100 border-{{ card.tone }}">
+          <div class="small text-muted">{{ card.title }}</div>
+          <div class="fs-5 fw-semibold text-{{ card.tone }}">{{ card.amount }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if warning %}
+    <div class="alert alert-warning">{{ warning }}</div>
+    {% endif %}
+
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <h6>Gastos imprevistos del mes</h6>
+        {% if profile.unexpected_expenses %}
+        <ul class="list-group list-group-flush mb-2">
+          {% for exp in profile.unexpected_expenses %}
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span>{{ exp.name }}</span><span>{{ format_money(exp.amount) }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="small mb-0">Subtotal: {{ format_money(profile.total_unexpected_expenses) }}</p>
+        {% else %}
+        <p class="text-muted small">No hay gastos imprevistos registrados.</p>
+        {% endif %}
+      </div>
+      <div class="col-lg-7">
+        <h6>Detalle de metas</h6>
+        {% if profile.savings_goals %}
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr><th>Meta</th><th class="text-end">Ahorrado</th><th class="text-end">Objetivo</th><th class="text-end">Progreso</th><th class="text-end">Aporte/mes</th></tr>
+            </thead>
+            <tbody>
+              {% for g in profile.savings_goals %}
+              <tr>
+                <td>{{ g.name }}</td>
+                <td class="text-end">{{ format_money(g.saved) }}</td>
+                <td class="text-end">{{ format_money(g.target) }}</td>
+                <td class="text-end">{{ "%.1f"|format(g.progress_percent) }}%</td>
+                <td class="text-end">{{ format_money(g.monthly_contribution) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted small">Sin metas registradas.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="tab-pane fade {% if active_tab == 'charts' %}show active{% endif %}" id="tab-charts">
+    {% if chart_data.has_data %}
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <canvas id="pieChart" height="260"></canvas>
+      </div>
+      <div class="col-lg-7">
+        <canvas id="barChart" height="260"></canvas>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">Ingrese ingresos o gastos para ver los gráficos.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  window.FINANCE_CHART_DATA = {{ chart_data | tojson }};
+  window.OTHER_UNEXPECTED_LABEL = {{ other_unexpected | tojson }};
+  window.ACTIVE_TAB = {{ active_tab | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
