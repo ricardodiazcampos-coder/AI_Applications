@@ -47,9 +47,11 @@ En **Site configuration → Environment variables**, agregar:
 
 | Variable | Valor | Alcance |
 |----------|-------|---------|
-| `FLASK_SECRET_KEY` | Una cadena larga y aleatoria (ej. salida de `python -c "import secrets; print(secrets.token_hex(32))"`) | Functions |
-| `PYTHON_VERSION` | `3.11` | Functions |
-| `NETLIFY` | `true` | Functions (opcional; la app también lo detecta sola) |
+| `FLASK_SECRET_KEY` | Una cadena larga y aleatoria (ej. salida de `python -c "import secrets; print(secrets.token_hex(32))"`) | **Functions** |
+| `PYTHON_VERSION` | `3.11` | **Functions** (nunca en Builds) |
+| `NETLIFY` | `true` | **Functions** (opcional) |
+
+**Importante:** si `PYTHON_VERSION` está en scope **All** o **Builds**, Netlify intenta instalar Python en el build y el deploy falla. Usa solo scope **Functions**.
 
 Sin `FLASK_SECRET_KEY` estable, las sesiones se invalidan en cada despliegue o reinicio de función.
 
@@ -64,7 +66,7 @@ Tras el deploy, abrir la URL asignada (ej. `https://tu-sitio.netlify.app`):
 ## Ejecución local (sin Netlify)
 
 ```powershell
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-local.txt
 python app.py
 ```
 
@@ -98,6 +100,8 @@ proyecto/
 | CSS no carga | Confirmar que `static/` está en el repo y `publish = "static"` en `netlify.toml` |
 | Sesión se cierra sola | Definir `FLASK_SECRET_KEY` en variables de entorno |
 | Usuarios desaparecen | Comportamiento esperado con SQLite en `/tmp`; usar BD externa para persistencia |
+| 404 cacheado tras arreglar deploy | **Deploys → Clear cache and deploy site** |
+| Build falla en pip/matplotlib | No uses `requirements.txt` en la raíz; localmente usa `requirements-local.txt` |
 
 ## Referencias
 

@@ -2,11 +2,9 @@
 # https://docs.netlify.com/deploy/deploy-overview/
 
 [build]
+  command = "echo Deploy estatico listo"
   publish = "static"
   functions = "netlify/functions"
-
-[build.environment]
-  NETLIFY = "true"
 
 [functions]
   included_files = [
