@@ -16,6 +16,10 @@ from web_logic import build_view_context, resolve_unexpected_name
 login_manager = LoginManager()
 
 
+def _is_production_host() -> bool:
+    return bool(os.environ.get("NETLIFY") or os.environ.get("RENDER"))
+
+
 def create_app() -> Flask:
     application = Flask(__name__)
     application.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(16))
@@ -23,10 +27,10 @@ def create_app() -> Flask:
     application.config.update(
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        SESSION_COOKIE_SECURE=bool(os.environ.get("NETLIFY")),
+        SESSION_COOKIE_SECURE=_is_production_host(),
     )
 
-    if os.environ.get("NETLIFY"):
+    if _is_production_host():
         application.wsgi_app = ProxyFix(
             application.wsgi_app,
             x_for=1,
